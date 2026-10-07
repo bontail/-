@@ -1,0 +1,575 @@
+@prefix : <http://example.org/clash-royale#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix swrlb: <http://www.w3.org/2003/11/swrlb#> .
+@prefix swrl: <http://www.w3.org/2003/11/swrl#> .
+
+<http://example.org/clash-royale> a owl:Ontology ;
+    rdfs:label "Clash Royale"@ru ;
+    rdfs:comment "Перенос базы знаний из clash_royale.pl."@ru .
+
+
+# Классы из одноместных предикатов Prolog
+
+:Card a owl:Class ; rdfs:label "Карта"@ru .
+
+:Troop a owl:Class ; rdfs:subClassOf :Card ; rdfs:label "Войско"@ru .
+
+:Spell a owl:Class ; rdfs:subClassOf :Card ; rdfs:label "Заклинание"@ru .
+
+:Building a owl:Class ; rdfs:subClassOf :Card ; rdfs:label "Здание"@ru .
+
+:FlyingTroop a owl:Class ; rdfs:subClassOf :Troop ; rdfs:label "Летающее войско"@ru .
+
+:GroundTroop a owl:Class ; rdfs:subClassOf :Troop ; rdfs:label "Наземное войско"@ru .
+
+:SwarmCard a owl:Class ; rdfs:subClassOf :Card ; rdfs:label "Карта-рой"@ru .
+
+:SwarmTroop a owl:Class ; rdfs:subClassOf :SwarmCard ; rdfs:label "Рой (войско)"@ru .
+
+:AreaDamageCard a owl:Class ; rdfs:subClassOf :Card ; rdfs:label "Урон по площади"@ru .
+
+:WinCondition a owl:Class ; rdfs:subClassOf :Card ; rdfs:label "Ударная карта"@ru .
+
+:Deck a owl:Class ; rdfs:label "Колода"@ru .
+
+:Rarity a owl:Class ; rdfs:label "Редкость"@ru .
+
+:TargetType a owl:Class ; rdfs:label "Тип цели"@ru .
+
+:Archetype a owl:Class ; rdfs:label "Архетип"@ru .
+
+
+[] a owl:AllDisjointClasses ; owl:members ( :Troop :Spell :Building ) .
+
+:FlyingTroop owl:disjointWith :GroundTroop .
+
+
+# Свойства из двухместных предикатов Prolog
+
+:hasRarity a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:domain :Card ; rdfs:range :Rarity ; rdfs:label "имеет редкость"@ru .
+
+
+:hasTargets a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:domain :Card ; rdfs:range :TargetType ; rdfs:label "атакует цели"@ru .
+
+
+:counters a owl:ObjectProperty ;
+    rdfs:domain :Card ; rdfs:range :Card ; rdfs:label "контрит"@ru .
+
+
+:inDeck a owl:ObjectProperty ;
+    rdfs:domain :Card ; rdfs:range :Deck ; rdfs:label "входит в колоду"@ru .
+
+
+:hasCard a owl:ObjectProperty ;
+    owl:inverseOf :inDeck ; rdfs:label "содержит карту"@ru .
+
+
+:hasArchetype a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:domain :Deck ; rdfs:range :Archetype ; rdfs:label "имеет архетип"@ru .
+
+
+:elixirCost a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:domain :Card ; rdfs:range xsd:integer ; rdfs:label "стоимость в эликсире"@ru .
+
+
+:minTrophies a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:domain :Rarity ; rdfs:range xsd:integer ; rdfs:label "минимум кубков"@ru .
+
+
+# Свойства, соответствующие правилам can_hit, good_against и synergy
+
+:canHit a owl:ObjectProperty ;
+    rdfs:domain :Card ; rdfs:range :Troop ; rdfs:label "может атаковать"@ru .
+
+
+:goodAgainst a owl:ObjectProperty ;
+    rdfs:domain :Card ; rdfs:range :Card ; rdfs:label "хорош против"@ru .
+
+
+:counters rdfs:subPropertyOf :goodAgainst .
+
+
+:synergy a owl:ObjectProperty, owl:SymmetricProperty ;
+    owl:propertyChainAxiom ( :inDeck :hasCard ) ;
+    rdfs:label "сочетается с"@ru .
+
+
+# Классы, соответствующие правилам anti_air и cost_category
+
+:AntiAirCard a owl:Class ;
+    rdfs:subClassOf :Card ;
+    rdfs:label "Карта против воздуха"@ru ;
+    owl:equivalentClass [ a owl:Class ;
+        owl:intersectionOf ( :Card
+            [ a owl:Restriction ; owl:onProperty :hasTargets ; owl:hasValue :air_ground ]
+        )
+    ] .
+
+
+:CheapCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Дешёвая карта"@ru ;
+    owl:equivalentClass [ a owl:Class ;
+        owl:intersectionOf ( :Card
+            [ a owl:Restriction ; owl:onProperty :elixirCost ;
+              owl:someValuesFrom [ a rdfs:Datatype ; owl:onDatatype xsd:integer ;
+                  owl:withRestrictions ( [ xsd:maxInclusive 2 ] ) ] ]
+        )
+    ] .
+
+
+:MediumCostCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Карта средней стоимости"@ru ;
+    owl:equivalentClass [ a owl:Class ;
+        owl:intersectionOf ( :Card
+            [ a owl:Restriction ; owl:onProperty :elixirCost ;
+              owl:someValuesFrom [ a rdfs:Datatype ; owl:onDatatype xsd:integer ;
+                  owl:withRestrictions ( [ xsd:minInclusive 3 ] [ xsd:maxInclusive 4 ] ) ] ]
+        )
+    ] .
+
+
+:HeavyCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Дорогая карта"@ru ;
+    owl:equivalentClass [ a owl:Class ;
+        owl:intersectionOf ( :Card
+            [ a owl:Restriction ; owl:onProperty :elixirCost ;
+              owl:someValuesFrom [ a rdfs:Datatype ; owl:onDatatype xsd:integer ;
+                  owl:withRestrictions ( [ xsd:minInclusive 5 ] ) ] ]
+        )
+    ] .
+
+
+# Карты, которые не атакуют только здания. Используется в правиле canHit.
+:GeneralAttacker a owl:Class ;
+    rdfs:subClassOf :Card ;
+    owl:equivalentClass [ a owl:Class ;
+        owl:intersectionOf ( :Card [ a owl:Class ; owl:unionOf (
+            [ a owl:Restriction ; owl:onProperty :hasTargets ; owl:hasValue :ground ]
+            [ a owl:Restriction ; owl:onProperty :hasTargets ; owl:hasValue :air_ground ]
+        ) ] )
+    ] .
+
+
+:BuildingTargeter a owl:Class ;
+    rdfs:subClassOf :Troop ;
+    rdfs:label "Бьёт только здания"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Troop
+        [ a owl:Restriction ; owl:onProperty :hasTargets ; owl:hasValue :buildings ] ) ] .
+
+
+:CounterCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Контра"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Card
+        [ a owl:Restriction ; owl:onProperty :counters ; owl:someValuesFrom :Card ] ) ] .
+
+
+:LegendaryCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Легендарная карта"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Card
+        [ a owl:Restriction ; owl:onProperty :hasRarity ; owl:hasValue :legendary ] ) ] .
+
+
+:ChampionCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Карта-чемпион"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Card
+        [ a owl:Restriction ; owl:onProperty :hasRarity ; owl:hasValue :champion ] ) ] .
+
+
+:BeginnerFriendlyCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Карта для новичка"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Card
+        [ a owl:Restriction ; owl:onProperty :hasRarity ; owl:someValuesFrom
+            [ a owl:Class ; owl:intersectionOf ( :Rarity
+                [ a owl:Restriction ; owl:onProperty :minTrophies ; owl:someValuesFrom
+                    [ a rdfs:Datatype ; owl:onDatatype xsd:integer ;
+                      owl:withRestrictions ( [ xsd:maxInclusive 0 ] ) ] ] ) ] ] ) ] .
+
+
+:CycleDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Колода-цикл"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasArchetype ; owl:hasValue :cycle ] ) ] .
+
+
+:BaitDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Бейт-колода"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasArchetype ; owl:hasValue :bait ] ) ] .
+
+
+:BeatdownDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Битдаун-колода"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasArchetype ; owl:hasValue :beatdown ] ) ] .
+
+
+:SiegeDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Осадная колода"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasArchetype ; owl:hasValue :siege ] ) ] .
+
+
+:BridgeSpamDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Бридж-спам колода"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasArchetype ; owl:hasValue :bridge_spam ] ) ] .
+
+
+:ControlDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Контроль-колода"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasArchetype ; owl:hasValue :control ] ) ] .
+
+
+:DeckWithBuilding a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Колода со зданием"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasCard ; owl:someValuesFrom :Building ] ) ] .
+
+
+
+:NonAreaDamageCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Без урона по площади"@ru ;
+    owl:equivalentClass [ owl:complementOf :AreaDamageCard ] .
+
+
+:NonSwarmCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Не рой"@ru ;
+    owl:equivalentClass [ owl:complementOf :SwarmCard ] .
+
+
+:NonAntiAirCard a owl:Class ;
+    rdfs:subClassOf :Card ; rdfs:label "Не бьёт по воздуху"@ru ;
+    owl:equivalentClass [ owl:complementOf :AntiAirCard ] .
+
+
+:TroopOrBuilding a owl:Class ;
+    rdfs:label "Войско или здание"@ru ;
+    owl:equivalentClass [ owl:unionOf ( :Troop :Building ) ] .
+
+
+:AirAttackDeck a owl:Class ;
+    rdfs:subClassOf :Deck ; rdfs:label "Колода с воздушной атакой"@ru ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( :Deck
+        [ a owl:Restriction ; owl:onProperty :hasCard ; owl:someValuesFrom
+            [ a owl:Class ; owl:intersectionOf ( :FlyingTroop :WinCondition ) ] ] ) ] .
+
+
+# SWRL: AntiAirCard(A) и FlyingTroop(T) -> canHit(A,T).
+:attacker a swrl:Variable .
+
+:target a swrl:Variable .
+
+:enemy a swrl:Variable .
+
+
+:CanHitFlyingRule a swrl:Imp ;
+    swrl:body (
+        [ a swrl:ClassAtom ; swrl:classPredicate :AntiAirCard ; swrl:argument1 :attacker ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :FlyingTroop ; swrl:argument1 :target ]
+    ) ;
+    swrl:head (
+        [ a swrl:IndividualPropertyAtom ; swrl:propertyPredicate :canHit ;
+          swrl:argument1 :attacker ; swrl:argument2 :target ]
+    ) .
+
+
+# SWRL: GeneralAttacker(A) и GroundTroop(T) -> canHit(A,T).
+:CanHitGroundRule a swrl:Imp ;
+    swrl:body (
+        [ a swrl:ClassAtom ; swrl:classPredicate :GeneralAttacker ; swrl:argument1 :attacker ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :GroundTroop ; swrl:argument1 :target ]
+    ) ;
+    swrl:head (
+        [ a swrl:IndividualPropertyAtom ; swrl:propertyPredicate :canHit ;
+          swrl:argument1 :attacker ; swrl:argument2 :target ]
+    ) .
+
+
+# SWRL: AreaDamageCard(A), SwarmCard(E), canHit(A,E) -> goodAgainst(A,E).
+:GoodAgainstSwarmRule a swrl:Imp ;
+    swrl:body (
+        [ a swrl:ClassAtom ; swrl:classPredicate :AreaDamageCard ; swrl:argument1 :attacker ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :SwarmCard ; swrl:argument1 :enemy ]
+        [ a swrl:IndividualPropertyAtom ; swrl:propertyPredicate :canHit ;
+          swrl:argument1 :attacker ; swrl:argument2 :enemy ]
+    ) ;
+    swrl:head (
+        [ a swrl:IndividualPropertyAtom ; swrl:propertyPredicate :goodAgainst ;
+          swrl:argument1 :attacker ; swrl:argument2 :enemy ]
+    ) .
+
+
+# SWRL: рой(A), карта(E) без урона по площади, не рой и не бьёт только
+# здания, стоимость >= 4 -> goodAgainst(A,E).
+:GoodAgainstExpensiveRule a swrl:Imp ;
+    swrl:body (
+        [ a swrl:ClassAtom ; swrl:classPredicate :SwarmTroop ; swrl:argument1 :attacker ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :NonAreaDamageCard ; swrl:argument1 :enemy ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :NonSwarmCard ; swrl:argument1 :enemy ]
+        [ a swrl:ClassAtom ; swrl:classPredicate [ owl:complementOf :BuildingTargeter ] ;
+          swrl:argument1 :enemy ]
+        [ a swrl:DataPropertyAtom ; swrl:propertyPredicate :elixirCost ;
+          swrl:argument1 :enemy ; swrl:argument2 :cost ]
+        [ a swrl:BuiltinAtom ; swrl:builtin swrlb:greaterThanOrEqual ;
+          swrl:arguments ( :cost 4 ) ]
+    ) ;
+    swrl:head (
+        [ a swrl:IndividualPropertyAtom ; swrl:propertyPredicate :goodAgainst ;
+          swrl:argument1 :attacker ; swrl:argument2 :enemy ]
+    ) .
+
+
+# SWRL: летающая карта без целей «только здания» против войска или здания,
+# которое не бьёт по воздуху -> goodAgainst(A,E).
+:GoodAgainstGroundRule a swrl:Imp ;
+    swrl:body (
+        [ a swrl:ClassAtom ; swrl:classPredicate :FlyingTroop ; swrl:argument1 :attacker ]
+        [ a swrl:ClassAtom ; swrl:classPredicate [ owl:complementOf :BuildingTargeter ] ;
+          swrl:argument1 :attacker ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :TroopOrBuilding ; swrl:argument1 :enemy ]
+        [ a swrl:ClassAtom ; swrl:classPredicate :NonAntiAirCard ; swrl:argument1 :enemy ]
+        [ a swrl:ClassAtom ; swrl:classPredicate [ owl:complementOf :BuildingTargeter ] ;
+          swrl:argument1 :enemy ]
+    ) ;
+    swrl:head (
+        [ a swrl:IndividualPropertyAtom ; swrl:propertyPredicate :goodAgainst ;
+          swrl:argument1 :attacker ; swrl:argument2 :enemy ]
+    ) .
+
+# Значения редкости, типов целей и архетипов
+
+# rarity_min_trophies/2 из Prolog
+:common a :Rarity ; :minTrophies 0 .
+:rare a :Rarity ; :minTrophies 0 .
+:epic a :Rarity ; :minTrophies 1000 .
+:legendary a :Rarity ; :minTrophies 3000 .
+:champion a :Rarity ; :minTrophies 5000 .
+
+:ground a :TargetType .
+:air_ground a :TargetType .
+:buildings a :TargetType .
+
+:cycle a :Archetype ; rdfs:label "быстрый цикл"@ru .
+:bait a :Archetype ; rdfs:label "бейт (приманка)"@ru .
+:beatdown a :Archetype ; rdfs:label "битдаун (мощный пуш)"@ru .
+:siege a :Archetype ; rdfs:label "осада"@ru .
+:bridge_spam a :Archetype ; rdfs:label "бридж-спам"@ru .
+:control a :Archetype ; rdfs:label "контроль"@ru .
+
+[] a owl:AllDifferent ;
+    owl:distinctMembers ( :common :rare :epic :legendary :champion :ground :air_ground :buildings :cycle :bait :beatdown :siege :bridge_spam :control ) .
+
+# Колоды (19): deck/1, deck_name/2, archetype/2 из Prolog.
+
+:hog_cycle a :Deck ;
+    rdfs:label "Хог-цикл 2.6"@ru ;
+    :hasArchetype :cycle .
+
+:royal_hogs_cycle a :Deck ;
+    rdfs:label "Королевские кабаны 3.0"@ru ;
+    :hasArchetype :cycle .
+
+:mortar_cycle a :Deck ;
+    rdfs:label "Мортира 3.0"@ru ;
+    :hasArchetype :siege .
+
+:xbow_siege a :Deck ;
+    rdfs:label "Осада с Арбалетом"@ru ;
+    :hasArchetype :siege .
+
+:log_bait a :Deck ;
+    rdfs:label "Лог-бейт"@ru ;
+    :hasArchetype :bait .
+
+:goblin_bait a :Deck ;
+    rdfs:label "Гоблинский бейт"@ru ;
+    :hasArchetype :bait .
+
+:miner_poison a :Deck ;
+    rdfs:label "Шахтёр и Яд"@ru ;
+    :hasArchetype :control .
+
+:splashyard a :Deck ;
+    rdfs:label "Кладбище со сплэшем"@ru ;
+    :hasArchetype :control .
+
+:egiant_lightning a :Deck ;
+    rdfs:label "Электрогигант и Молния"@ru ;
+    :hasArchetype :control .
+
+:goblinstein_control a :Deck ;
+    rdfs:label "Гоблинштейн-контроль"@ru ;
+    :hasArchetype :control .
+
+:three_musketeers a :Deck ;
+    rdfs:label "Три мушкетёра"@ru ;
+    :hasArchetype :control .
+
+:mega_knight_control a :Deck ;
+    rdfs:label "Мегарыцарь-контроль"@ru ;
+    :hasArchetype :control .
+
+:giant_double_prince a :Deck ;
+    rdfs:label "Гигант с двумя принцами"@ru ;
+    :hasArchetype :beatdown .
+
+:golem_beatdown a :Deck ;
+    rdfs:label "Голем-битдаун"@ru ;
+    :hasArchetype :beatdown .
+
+:lavaloon a :Deck ;
+    rdfs:label "ЛаваЛун"@ru ;
+    :hasArchetype :beatdown .
+
+:balloon_freeze a :Deck ;
+    rdfs:label "Шар и Заморозка"@ru ;
+    :hasArchetype :beatdown .
+
+:minion_giant_balloon a :Deck ;
+    rdfs:label "Гигантский миньон и шар"@ru ;
+    :hasArchetype :beatdown .
+
+:bridge_spam_deck a :Deck ;
+    rdfs:label "П.Е.К.К.А бридж-спам"@ru ;
+    :hasArchetype :bridge_spam .
+
+:ram_rider_bridge_spam a :Deck ;
+    rdfs:label "Бридж-спам с Всадницей"@ru ;
+    :hasArchetype :bridge_spam .
+
+# Карты (123). Каждая строка переносит тип, название, стоимость,
+# редкость, цели, принадлежность к колодам и прямые контры из Prolog.
+
+:archer_queen a :Troop, :GroundTroop ; rdfs:label "Королева лучниц"@ru ; :elixirCost 5 ; :hasRarity :champion ; :hasTargets :air_ground .
+:archers a :Troop, :GroundTroop ; rdfs:label "Лучницы"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :mortar_cycle, :xbow_siege .
+:arrows a :Spell, :AreaDamageCard ; rdfs:label "Стрелы"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :golem_beatdown, :minion_giant_balloon ; :counters :archers, :bats, :dart_goblin, :firecracker, :goblin_barrel, :goblin_gang, :minion_horde, :minions, :princess, :skeleton_army, :skeleton_barrel, :suspicious_bush, :wall_breakers .
+:baby_dragon a :Troop, :FlyingTroop, :AreaDamageCard ; rdfs:label "Дракончик"@ru ; :elixirCost 4 ; :hasRarity :epic ; :hasTargets :air_ground ; :inDeck :egiant_lightning, :golem_beatdown, :minion_giant_balloon, :splashyard ; :counters :bats, :elixir_golem .
+:balloon a :Troop, :FlyingTroop, :WinCondition ; rdfs:label "Шар"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :buildings ; :inDeck :balloon_freeze, :lavaloon, :minion_giant_balloon .
+:bandit a :Troop, :GroundTroop ; rdfs:label "Бандитка"@ru ; :elixirCost 3 ; :hasRarity :legendary ; :hasTargets :ground ; :inDeck :bridge_spam_deck, :mega_knight_control, :ram_rider_bridge_spam, :three_musketeers .
+:barbarian_barrel a :Spell, :AreaDamageCard ; rdfs:label "Варварская бочка"@ru ; :elixirCost 2 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :balloon_freeze, :egiant_lightning, :splashyard ; :counters :goblins .
+:barbarian_hut a :Building ; rdfs:label "Хижина варваров"@ru ; :elixirCost 6 ; :hasRarity :rare ; :hasTargets :ground .
+:barbarians a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Варвары"@ru ; :elixirCost 5 ; :hasRarity :common ; :hasTargets :ground .
+:bats a :Troop, :FlyingTroop, :SwarmTroop ; rdfs:label "Летучие мыши"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :balloon_freeze, :giant_double_prince, :mega_knight_control, :miner_poison ; :counters :balloon .
+:battle_healer a :Troop, :GroundTroop ; rdfs:label "Целительница-воин"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :ground .
+:battle_ram a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Боевой таран"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :buildings ; :inDeck :bridge_spam_deck, :three_musketeers .
+:berserker a :Troop, :GroundTroop ; rdfs:label "Берсеркша"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :ground .
+:bomb_tower a :Building, :AreaDamageCard ; rdfs:label "Башня-бомбежка"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :ground ; :counters :hog_rider, :royal_hogs .
+:bomber a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Подрывник"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :ground ; :counters :barbarians, :goblin_gang, :skeleton_army .
+:boss_bandit a :Troop, :GroundTroop ; rdfs:label "Главная бандитка"@ru ; :elixirCost 6 ; :hasRarity :champion ; :hasTargets :ground .
+:bowler a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Вышибала"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :ground ; :counters :barbarians, :graveyard, :royal_hogs, :royal_recruits .
+:cannon a :Building ; rdfs:label "Пушка"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :ground ; :inDeck :hog_cycle ; :counters :hog_rider .
+:cannon_cart a :Troop, :GroundTroop ; rdfs:label "Повозка с пушкой"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :ground .
+:clone a :Spell ; rdfs:label "Клон"@ru ; :elixirCost 3 ; :hasRarity :epic .
+:dark_prince a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Тёмный принц"@ru ; :elixirCost 4 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :bridge_spam_deck, :egiant_lightning, :giant_double_prince .
+:dart_goblin a :Troop, :GroundTroop ; rdfs:label "Гоблин с дротиками"@ru ; :elixirCost 3 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :goblin_bait, :goblinstein_control, :mega_knight_control, :royal_hogs_cycle .
+:earthquake a :Spell, :AreaDamageCard ; rdfs:label "Землетрясение"@ru ; :elixirCost 3 ; :hasRarity :rare ; :hasTargets :ground ; :inDeck :royal_hogs_cycle ; :counters :barbarian_hut, :bomb_tower, :cannon, :elixir_collector, :furnace, :goblin_cage, :goblin_drill, :goblin_hut, :mortar, :tesla, :tombstone, :x_bow .
+:electro_dragon a :Troop, :FlyingTroop, :AreaDamageCard ; rdfs:label "Электродракон"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :air_ground ; :counters :sparky .
+:electro_giant a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Электрогигант"@ru ; :elixirCost 7 ; :hasRarity :epic ; :hasTargets :buildings ; :inDeck :egiant_lightning .
+:electro_spirit a :Troop, :GroundTroop ; rdfs:label "Электрический дух"@ru ; :elixirCost 1 ; :hasRarity :common ; :hasTargets :air_ground .
+:electro_wizard a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Громовержец"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :air_ground ; :inDeck :bridge_spam_deck, :ram_rider_bridge_spam ; :counters :inferno_dragon, :inferno_tower, :mighty_miner, :sparky .
+:elite_barbarians a :Troop, :GroundTroop ; rdfs:label "Элитные варвары"@ru ; :elixirCost 6 ; :hasRarity :common ; :hasTargets :ground .
+:elixir_collector a :Building ; rdfs:label "Сборщик эликсира"@ru ; :elixirCost 6 ; :hasRarity :rare ; :inDeck :three_musketeers .
+:elixir_golem a :Troop, :GroundTroop ; rdfs:label "Эликсирный голем"@ru ; :elixirCost 3 ; :hasRarity :rare ; :hasTargets :buildings .
+:executioner a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Палач"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :air_ground ; :counters :minion_horde .
+:fire_spirit a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Огненный дух"@ru ; :elixirCost 1 ; :hasRarity :common ; :hasTargets :air_ground ; :counters :bats .
+:fireball a :Spell, :AreaDamageCard ; rdfs:label "Огненный шар"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :giant_double_prince, :goblin_bait, :goblinstein_control, :hog_cycle, :lavaloon, :mega_knight_control, :mortar_cycle, :xbow_siege ; :counters :archers, :barbarians, :dart_goblin, :firecracker, :flying_machine, :magic_archer, :minion_horde, :royal_hogs, :royal_recruits, :skeleton_dragons, :three_musketeers .
+:firecracker a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Огненная лучница"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :air_ground .
+:fisherman a :Troop, :GroundTroop ; rdfs:label "Рыбак"@ru ; :elixirCost 3 ; :hasRarity :legendary ; :hasTargets :ground .
+:flying_machine a :Troop, :FlyingTroop ; rdfs:label "Летучка"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :royal_hogs_cycle .
+:freeze a :Spell ; rdfs:label "Заморозка"@ru ; :elixirCost 4 ; :hasRarity :epic ; :inDeck :balloon_freeze, :minion_giant_balloon .
+:furnace a :Building ; rdfs:label "Печь"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :air_ground .
+:giant a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Гигант"@ru ; :elixirCost 5 ; :hasRarity :rare ; :hasTargets :buildings ; :inDeck :giant_double_prince .
+:giant_skeleton a :Troop, :GroundTroop ; rdfs:label "Гигантский скелет"@ru ; :elixirCost 6 ; :hasRarity :epic ; :hasTargets :ground .
+:giant_snowball a :Spell, :AreaDamageCard ; rdfs:label "Гигантский снежок"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :air_ground .
+:goblin_barrel a :Spell, :SwarmCard, :WinCondition ; rdfs:label "Гоблинская бочка"@ru ; :elixirCost 3 ; :hasRarity :epic ; :inDeck :log_bait .
+:goblin_cage a :Building ; rdfs:label "Клетка с гоблином"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :ground ; :counters :hog_rider .
+:goblin_curse a :Spell, :AreaDamageCard ; rdfs:label "Проклятие гоблинов"@ru ; :elixirCost 2 ; :hasRarity :epic ; :hasTargets :air_ground ; :inDeck :goblin_bait .
+:goblin_demolisher a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Гоблин-подрывник"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :ground .
+:goblin_drill a :Building, :WinCondition ; rdfs:label "Гоблинский бур"@ru ; :elixirCost 4 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :goblin_bait .
+:goblin_gang a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Банда гоблинов"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :goblin_bait, :goblinstein_control, :royal_hogs_cycle ; :counters :monk .
+:goblin_giant a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Гоблин-гигант"@ru ; :elixirCost 6 ; :hasRarity :epic ; :hasTargets :buildings .
+:goblin_hut a :Building ; rdfs:label "Хижина гоблинов"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :air_ground .
+:goblin_machine a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Гоблин-машина"@ru ; :elixirCost 5 ; :hasRarity :legendary ; :hasTargets :air_ground ; :inDeck :goblinstein_control .
+:goblins a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Гоблины"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :ground ; :inDeck :log_bait .
+:goblinstein a :Troop, :GroundTroop ; rdfs:label "Гоблинштейн"@ru ; :elixirCost 5 ; :hasRarity :champion ; :hasTargets :air_ground ; :inDeck :goblinstein_control .
+:golden_knight a :Troop, :GroundTroop ; rdfs:label "Золотой рыцарь"@ru ; :elixirCost 4 ; :hasRarity :champion ; :hasTargets :ground .
+:golem a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Голем"@ru ; :elixirCost 8 ; :hasRarity :epic ; :hasTargets :buildings ; :inDeck :golem_beatdown .
+:graveyard a :Spell, :SwarmCard, :WinCondition ; rdfs:label "Кладбище"@ru ; :elixirCost 5 ; :hasRarity :legendary ; :inDeck :splashyard .
+:guards a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Стражи"@ru ; :elixirCost 3 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :lavaloon, :minion_giant_balloon ; :counters :boss_bandit, :golden_knight, :pekka, :prince .
+:heal_spirit a :Troop, :GroundTroop ; rdfs:label "Дух исцеления"@ru ; :elixirCost 1 ; :hasRarity :rare .
+:hog_rider a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Всадник на кабане"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :buildings ; :inDeck :hog_cycle .
+:hunter a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Охотник"@ru ; :elixirCost 4 ; :hasRarity :epic ; :hasTargets :air_ground ; :counters :balloon .
+:ice_golem a :Troop, :GroundTroop ; rdfs:label "Ледяной голем"@ru ; :elixirCost 2 ; :hasRarity :rare ; :hasTargets :buildings ; :inDeck :golem_beatdown, :hog_cycle, :miner_poison, :ram_rider_bridge_spam, :three_musketeers .
+:ice_spirit a :Troop, :GroundTroop ; rdfs:label "Ледяной дух"@ru ; :elixirCost 1 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :hog_cycle, :log_bait, :mortar_cycle, :royal_hogs_cycle, :xbow_siege .
+:ice_wizard a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Ледяной колдун"@ru ; :elixirCost 3 ; :hasRarity :legendary ; :hasTargets :air_ground ; :inDeck :splashyard .
+:inferno_dragon a :Troop, :FlyingTroop ; rdfs:label "Пламенный дракон"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :air_ground ; :inDeck :golem_beatdown ; :counters :balloon, :giant, :golem, :lava_hound, :royal_giant .
+:inferno_tower a :Building ; rdfs:label "Адская башня"@ru ; :elixirCost 5 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :log_bait ; :counters :balloon, :giant, :goblin_giant, :golem, :hog_rider, :lava_hound, :mega_knight, :minion_giant, :ram_rider, :royal_giant, :rune_giant .
+:knight a :Troop, :GroundTroop ; rdfs:label "Рыцарь"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :ground ; :inDeck :log_bait, :mortar_cycle, :splashyard, :xbow_siege .
+:lava_hound a :Troop, :FlyingTroop, :WinCondition ; rdfs:label "Адская гончая"@ru ; :elixirCost 7 ; :hasRarity :legendary ; :hasTargets :buildings ; :inDeck :lavaloon .
+:lightning a :Spell, :AreaDamageCard ; rdfs:label "Молния"@ru ; :elixirCost 6 ; :hasRarity :epic ; :hasTargets :air_ground ; :inDeck :egiant_lightning, :golem_beatdown ; :counters :electro_dragon, :electro_wizard, :elixir_collector, :ice_wizard, :three_musketeers, :witch, :wizard, :x_bow .
+:little_prince a :Troop, :GroundTroop ; rdfs:label "Маленький принц"@ru ; :elixirCost 3 ; :hasRarity :champion ; :hasTargets :air_ground .
+:lumberjack a :Troop, :GroundTroop ; rdfs:label "Дровосек"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :ground ; :inDeck :balloon_freeze .
+:magic_archer a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Магический лучник"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :air_ground .
+:mega_knight a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Мегарыцарь"@ru ; :elixirCost 7 ; :hasRarity :legendary ; :hasTargets :ground ; :inDeck :mega_knight_control ; :counters :hog_rider, :royal_recruits .
+:mega_minion a :Troop, :FlyingTroop ; rdfs:label "Мегаминьон"@ru ; :elixirCost 3 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :balloon_freeze, :egiant_lightning, :giant_double_prince, :golem_beatdown, :lavaloon, :minion_giant_balloon ; :counters :balloon, :minion_giant .
+:mighty_miner a :Troop, :GroundTroop ; rdfs:label "Шустрый шахтер"@ru ; :elixirCost 4 ; :hasRarity :champion ; :hasTargets :ground ; :counters :golem, :mega_knight .
+:miner a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Шахтёр"@ru ; :elixirCost 3 ; :hasRarity :legendary ; :hasTargets :ground ; :inDeck :miner_poison, :minion_giant_balloon ; :counters :elixir_collector, :princess .
+:mini_pekka a :Troop, :GroundTroop ; rdfs:label "Мини-П.Е.К.К.А."@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :ground ; :counters :battle_ram, :giant, :goblinstein, :golem, :mega_knight, :royal_giant .
+:minion_giant a :Troop, :FlyingTroop, :WinCondition ; rdfs:label "Гигантский миньон"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :buildings ; :inDeck :minion_giant_balloon .
+:minion_horde a :Troop, :FlyingTroop, :SwarmTroop ; rdfs:label "Орда миньонов"@ru ; :elixirCost 5 ; :hasRarity :common ; :hasTargets :air_ground .
+:minions a :Troop, :FlyingTroop, :SwarmTroop ; rdfs:label "Миньоны"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :bridge_spam_deck, :lavaloon, :ram_rider_bridge_spam, :three_musketeers ; :counters :balloon .
+:mirror a :Spell ; rdfs:label "Зеркало"@ru ; :elixirCost 1 ; :hasRarity :epic .
+:monk a :Troop, :GroundTroop ; rdfs:label "Монах"@ru ; :elixirCost 5 ; :hasRarity :champion ; :hasTargets :ground .
+:mortar a :Building, :AreaDamageCard, :WinCondition ; rdfs:label "Мортира"@ru ; :elixirCost 4 ; :hasRarity :common ; :hasTargets :ground ; :inDeck :mortar_cycle .
+:mother_witch a :Troop, :GroundTroop ; rdfs:label "Ведьмина бабушка"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :air_ground .
+:musketeer a :Troop, :GroundTroop ; rdfs:label "Мушкетёр"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :hog_cycle, :miner_poison ; :counters :baby_dragon, :balloon, :flying_machine, :hunter, :ice_wizard, :lava_hound, :mega_minion, :minion_giant, :phoenix .
+:night_witch a :Troop, :GroundTroop ; rdfs:label "Ночная ведьма"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :ground .
+:pekka a :Troop, :GroundTroop ; rdfs:label "П.Е.К.К.А."@ru ; :elixirCost 7 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :bridge_spam_deck ; :counters :electro_giant, :giant, :goblin_machine, :golem, :mega_knight, :skeleton_king .
+:phoenix a :Troop, :FlyingTroop ; rdfs:label "Феникс"@ru ; :elixirCost 4 ; :hasRarity :legendary ; :hasTargets :air_ground .
+:poison a :Spell, :AreaDamageCard ; rdfs:label "Яд"@ru ; :elixirCost 4 ; :hasRarity :epic ; :hasTargets :air_ground ; :inDeck :bridge_spam_deck, :miner_poison, :ram_rider_bridge_spam, :splashyard ; :counters :barbarian_hut, :elixir_collector, :furnace, :goblin_hut, :graveyard .
+:prince a :Troop, :GroundTroop ; rdfs:label "Принц"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :giant_double_prince .
+:princess a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Принцесса"@ru ; :elixirCost 3 ; :hasRarity :legendary ; :hasTargets :air_ground ; :inDeck :log_bait .
+:rage a :Spell ; rdfs:label "Ярость"@ru ; :elixirCost 2 ; :hasRarity :epic .
+:ram_rider a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Всадница на баране"@ru ; :elixirCost 5 ; :hasRarity :legendary ; :hasTargets :buildings ; :inDeck :ram_rider_bridge_spam .
+:rascals a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Разбойники"@ru ; :elixirCost 5 ; :hasRarity :common ; :hasTargets :air_ground .
+:rocket a :Spell, :AreaDamageCard ; rdfs:label "Ракета"@ru ; :elixirCost 6 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :log_bait, :mortar_cycle ; :counters :electro_wizard, :elixir_collector, :executioner, :mortar, :three_musketeers, :witch, :wizard, :x_bow .
+:ronin a :Troop, :GroundTroop ; rdfs:label "Ронин"@ru ; :elixirCost 5 ; :hasRarity :legendary ; :hasTargets :ground .
+:royal_delivery a :Spell, :AreaDamageCard ; rdfs:label "Королевская почта"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :royal_hogs_cycle .
+:royal_ghost a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Королевский призрак"@ru ; :elixirCost 3 ; :hasRarity :legendary ; :hasTargets :ground ; :inDeck :ram_rider_bridge_spam, :three_musketeers .
+:royal_giant a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Королевский гигант"@ru ; :elixirCost 6 ; :hasRarity :common ; :hasTargets :buildings .
+:royal_hogs a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Королевские кабаны"@ru ; :elixirCost 5 ; :hasRarity :rare ; :hasTargets :buildings ; :inDeck :royal_hogs_cycle .
+:royal_recruits a :Troop, :GroundTroop, :SwarmTroop, :WinCondition ; rdfs:label "Королевские рекруты"@ru ; :elixirCost 7 ; :hasRarity :common ; :hasTargets :ground .
+:rune_giant a :Troop, :GroundTroop, :WinCondition ; rdfs:label "Руническая гигантша"@ru ; :elixirCost 4 ; :hasRarity :epic ; :hasTargets :buildings .
+:skeleton_army a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Армия скелетов"@ru ; :elixirCost 3 ; :hasRarity :epic ; :hasTargets :ground ; :counters :berserker, :boss_bandit, :golden_knight, :hog_rider, :little_prince, :monk, :pekka, :prince, :ram_rider, :ronin .
+:skeleton_barrel a :Troop, :FlyingTroop, :SwarmTroop ; rdfs:label "Бочка со скелетами"@ru ; :elixirCost 3 ; :hasRarity :common ; :hasTargets :buildings .
+:skeleton_dragons a :Troop, :FlyingTroop, :AreaDamageCard ; rdfs:label "Костяные драконы"@ru ; :elixirCost 4 ; :hasRarity :common ; :hasTargets :air_ground .
+:skeleton_king a :Troop, :GroundTroop ; rdfs:label "Король скелетов"@ru ; :elixirCost 4 ; :hasRarity :champion ; :hasTargets :ground .
+:skeletons a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Скелеты"@ru ; :elixirCost 1 ; :hasRarity :common ; :hasTargets :ground ; :inDeck :balloon_freeze, :egiant_lightning, :giant_double_prince, :goblinstein_control, :hog_cycle, :mega_knight_control, :miner_poison, :mortar_cycle, :splashyard, :xbow_siege .
+:sparky a :Troop, :GroundTroop, :AreaDamageCard, :WinCondition ; rdfs:label "Спарки"@ru ; :elixirCost 6 ; :hasRarity :legendary ; :hasTargets :ground .
+:spear_goblins a :Troop, :GroundTroop, :SwarmTroop ; rdfs:label "Гоблины-копейщики"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :goblin_bait .
+:spirit_empress a :Troop, :FlyingTroop ; rdfs:label "Императрица духов"@ru ; :elixirCost 6 ; :hasRarity :legendary ; :hasTargets :air_ground .
+:suspicious_bush a :Troop, :GroundTroop ; rdfs:label "Подозрительный куст"@ru ; :elixirCost 2 ; :hasRarity :rare ; :hasTargets :buildings .
+:tesla a :Building ; rdfs:label "Тесла"@ru ; :elixirCost 4 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :balloon_freeze, :goblin_bait, :goblinstein_control, :mega_knight_control, :xbow_siege ; :counters :balloon, :hog_rider, :lava_hound, :minion_giant .
+:the_log a :Spell, :AreaDamageCard ; rdfs:label "Бревно"@ru ; :elixirCost 2 ; :hasRarity :legendary ; :hasTargets :ground ; :inDeck :goblin_bait, :goblinstein_control, :hog_cycle, :log_bait, :miner_poison, :mortar_cycle, :royal_hogs_cycle, :xbow_siege ; :counters :archers, :dart_goblin, :goblin_barrel, :goblin_drill, :goblin_gang, :goblins, :princess, :skeleton_army, :suspicious_bush, :tombstone, :wall_breakers .
+:three_musketeers a :Troop, :GroundTroop, :SwarmTroop, :WinCondition ; rdfs:label "Три мушкетёра"@ru ; :elixirCost 9 ; :hasRarity :rare ; :hasTargets :air_ground ; :inDeck :three_musketeers .
+:tombstone a :Building ; rdfs:label "Надгробие"@ru ; :elixirCost 3 ; :hasRarity :rare ; :hasTargets :ground ; :inDeck :lavaloon ; :counters :hog_rider .
+:tornado a :Spell, :AreaDamageCard ; rdfs:label "Торнадо"@ru ; :elixirCost 3 ; :hasRarity :epic ; :hasTargets :air_ground ; :inDeck :egiant_lightning, :splashyard .
+:valkyrie a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Валькирия"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :ground ; :inDeck :miner_poison ; :counters :barbarians, :goblin_drill, :graveyard, :skeleton_army .
+:vines a :Spell, :AreaDamageCard ; rdfs:label "Лоза"@ru ; :elixirCost 3 ; :hasRarity :epic ; :hasTargets :air_ground .
+:void a :Spell, :AreaDamageCard ; rdfs:label "Бездна"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :air_ground .
+:wall_breakers a :Troop, :GroundTroop, :SwarmTroop, :WinCondition ; rdfs:label "Стенобои"@ru ; :elixirCost 2 ; :hasRarity :epic ; :hasTargets :buildings .
+:witch a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Ведьма"@ru ; :elixirCost 5 ; :hasRarity :epic ; :hasTargets :air_ground ; :inDeck :golem_beatdown .
+:wizard a :Troop, :GroundTroop, :AreaDamageCard ; rdfs:label "Колдун"@ru ; :elixirCost 5 ; :hasRarity :rare ; :hasTargets :air_ground ; :counters :barbarians, :minion_horde .
+:x_bow a :Building, :WinCondition ; rdfs:label "Арбалет"@ru ; :elixirCost 6 ; :hasRarity :epic ; :hasTargets :ground ; :inDeck :xbow_siege .
+:zap a :Spell, :AreaDamageCard ; rdfs:label "Разряд"@ru ; :elixirCost 2 ; :hasRarity :common ; :hasTargets :air_ground ; :inDeck :bridge_spam_deck, :giant_double_prince, :lavaloon, :mega_knight_control, :ram_rider_bridge_spam, :three_musketeers ; :counters :bats, :inferno_dragon, :inferno_tower, :mighty_miner, :minions, :skeleton_barrel, :sparky, :suspicious_bush .
+:zappies a :Troop, :GroundTroop ; rdfs:label "Мини-генераторы"@ru ; :elixirCost 4 ; :hasRarity :rare ; :hasTargets :air_ground .
+
+# deck_avg_elixir/2 — агрегат, выполняется SPARQL-запросом (AVG + GROUP BY).
+# suits_player/2 сравнивает произвольное число кубков и тоже выполняется SPARQL.
+# anti_air/1 и can_hit/2 выводятся правилами (SWRL выше).
